@@ -53,4 +53,9 @@ class Usuario extends Authenticatable
     {
         return $this->hasMany(Suscripcion::class, 'id_usuario', 'id_usuario');
     }
+
+    public function reclamos()
+    {
+        return $this->hasMany(Reclamo::class, 'id_usuario', 'id_usuario');
+    }
 }

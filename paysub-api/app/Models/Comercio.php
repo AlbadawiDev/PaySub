@@ -42,4 +42,9 @@ class Comercio extends Model
     {
         return $this->belongsTo(Usuario::class, 'id_usuario', 'id_usuario');
     }
+
+    public function reclamos()
+    {
+        return $this->hasMany(Reclamo::class, 'id_comercio', 'id_comercio');
+    }
 }

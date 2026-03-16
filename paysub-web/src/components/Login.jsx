@@ -132,7 +132,9 @@ const Login = () => {
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('user_type', data.user.tipo_usuario);
 
-      if (data.user.tipo_usuario === 'comercio') {
+      if (data.user.tipo_usuario === 'administrador') {
+        navigate('/admin/dashboard');
+      } else if (data.user.tipo_usuario === 'comercio') {
         navigate('/comercio/dashboard');
       } else {
         navigate('/cliente-dashboard');

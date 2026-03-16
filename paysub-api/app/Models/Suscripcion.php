@@ -31,4 +31,14 @@ class Suscripcion extends Model
     {
         return $this->belongsTo(Plan::class, 'id_plan', 'id_plan');
     }
+
+    public function pagos()
+    {
+        return $this->hasMany(Pago::class, 'id_suscripcion', 'id_suscripcion');
+    }
+
+    public function reclamos()
+    {
+        return $this->hasMany(Reclamo::class, 'id_suscripcion', 'id_suscripcion');
+    }
 }
