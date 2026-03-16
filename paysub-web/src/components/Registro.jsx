@@ -10,7 +10,7 @@ import {
   saveVerifiedRegistration,
 } from '../utils/authFlowStorage';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+import { API_BASE_URL } from '../config/api';
 const OTP_LENGTH = 6;
 
 const createEmptyOtp = () => Array.from({ length: OTP_LENGTH }, () => '');
