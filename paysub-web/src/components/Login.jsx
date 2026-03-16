@@ -9,7 +9,7 @@ import {
   savePendingRegistration,
 } from '../utils/authFlowStorage';
 
-const API_BASE_URL = 'http://localhost:8000/api';
+import { API_BASE_URL } from '../config/api';
 
 const extractApiError = (payload, fallbackMessage) => {
   if (!payload) {

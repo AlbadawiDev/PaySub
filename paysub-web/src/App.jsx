@@ -1,28 +1,51 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import Landing from './components/Landing';
 import Login from './components/Login';
 import Registro from './components/Registro';
 import ClienteDashboard from './components/ClienteDashboard';
-// IMPORTANTE: Importamos el componente desde su propio archivo
-import ComercioDashboard from './components/ComercioDashboard'; 
+import ComercioDashboard from './components/ComercioDashboard';
+
+function ProtectedRoute({ element, allowedRoles = [] }) {
+  const token = localStorage.getItem('access_token');
+  const userType = localStorage.getItem('user_type');
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles.length > 0 && !allowedRoles.includes(userType)) {
+    if (userType === 'comercio') {
+      return <Navigate to="/comercio/dashboard" replace />;
+    }
+
+    if (userType === 'cliente') {
+      return <Navigate to="/cliente-dashboard" replace />;
+    }
+
+    return <Navigate to="/login" replace />;
+  }
+
+  return element;
+}
 
 function App() {
   return (
     <Routes>
-      {/* Ruta Principal */}
       <Route path="/" element={<Landing />} />
-      
-      {/* Autenticación */}
       <Route path="/login" element={<Login />} />
       <Route path="/registro" element={<Registro />} />
-      
-      {/* Dashboards Reales */}
-      <Route path="/cliente-dashboard" element={<ClienteDashboard />} />
-      <Route path="/comercio/dashboard" element={<ComercioDashboard />} />
-      
-      {/* Redirección por defecto si la ruta no existe (404) */}
-      <Route path="*" element={<Navigate to="/" />} />
+
+      <Route
+        path="/cliente-dashboard"
+        element={<ProtectedRoute element={<ClienteDashboard />} allowedRoles={['cliente']} />}
+      />
+      <Route
+        path="/comercio/dashboard"
+        element={<ProtectedRoute element={<ComercioDashboard />} allowedRoles={['comercio']} />}
+      />
+
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
