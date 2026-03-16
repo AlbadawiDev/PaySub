@@ -5,6 +5,7 @@ import Login from './components/Login';
 import Registro from './components/Registro';
 import ClienteDashboard from './components/ClienteDashboard';
 import ComercioDashboard from './components/ComercioDashboard';
+import AdminDashboard from './components/AdminDashboard';
 
 function ProtectedRoute({ element, allowedRoles = [] }) {
   const token = localStorage.getItem('access_token');
@@ -15,6 +16,10 @@ function ProtectedRoute({ element, allowedRoles = [] }) {
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(userType)) {
+    if (userType === 'administrador') {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
+
     if (userType === 'comercio') {
       return <Navigate to="/comercio/dashboard" replace />;
     }
@@ -43,6 +48,10 @@ function App() {
       <Route
         path="/comercio/dashboard"
         element={<ProtectedRoute element={<ComercioDashboard />} allowedRoles={['comercio']} />}
+      />
+      <Route
+        path="/admin/dashboard"
+        element={<ProtectedRoute element={<AdminDashboard />} allowedRoles={['administrador']} />}
       />
 
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -35,4 +35,9 @@ class Pago extends Model
     {
         return $this->belongsTo(MetodoPago::class, 'id_metodo_pago', 'id_metodo_pago');
     }
+
+    public function reclamos()
+    {
+        return $this->hasMany(Reclamo::class, 'id_pago', 'id_pago');
+    }
 }

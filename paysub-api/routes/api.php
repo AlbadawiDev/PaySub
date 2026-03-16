@@ -9,6 +9,8 @@ use App\Http\Controllers\ComercioController;
 use App\Http\Controllers\MetodoPagoController;
 use App\Http\Controllers\PagoController;
 use App\Http\Controllers\DatoPagoComercioController; // Importar el nuevo controlador
+use App\Http\Controllers\ReclamoController;
+use App\Http\Controllers\AdminMetricsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -66,5 +68,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Historial de Pagos General
     Route::get('/pagos', [PagoController::class, 'index']); 
     Route::get('/pagos/{id}', [PagoController::class, 'show']);
-	
+
+    // Reclamos y solicitudes
+    Route::post('/reclamos', [ReclamoController::class, 'store']);
+    Route::get('/reclamos', [ReclamoController::class, 'index']);
+    Route::get('/reclamos/{id}', [ReclamoController::class, 'show']);
+    Route::put('/reclamos/{id}/estado', [ReclamoController::class, 'updateStatus']);
+
+    // Panel administrador
+    Route::get('/admin/metricas', [AdminMetricsController::class, 'index']);
+
 });
