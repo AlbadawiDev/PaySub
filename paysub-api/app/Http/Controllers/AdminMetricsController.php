@@ -31,8 +31,8 @@ class AdminMetricsController extends Controller
         $comerciosTotal = Usuario::where('tipo_usuario', 'comercio')->count();
         $suscripcionesActivas = Suscripcion::whereRaw('LOWER(estado) = ?', ['activa'])->count();
         $pagosPendientes = Pago::whereIn('estatus_pago', ['pendiente', 'en_revision'])->count();
-        $ingresosTotales = (float) Pago::where('estatus_pago', 'completado')->sum('monto');
-        $ingresosMesActual = (float) Pago::where('estatus_pago', 'completado')
+        $ingresosTotales = (float) Pago::where('estatus_pago', 'completado')->where('moneda', 'USD')->sum('monto');
+        $ingresosMesActual = (float) Pago::where('estatus_pago', 'completado')->where('moneda', 'USD')->where('moneda', 'USD')
             ->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])
             ->sum('monto');
         $reclamosAbiertos = Reclamo::whereIn('estado', [Reclamo::ESTADO_ABIERTO, Reclamo::ESTADO_EN_REVISION])->count();
@@ -91,7 +91,7 @@ class AdminMetricsController extends Controller
             ->leftJoin('suscripciones', 'suscripciones.id_plan', '=', 'planes.id_plan')
             ->leftJoin('pagos', function ($join) {
                 $join->on('pagos.id_suscripcion', '=', 'suscripciones.id_suscripcion')
-                    ->where('pagos.estatus_pago', '=', 'completado');
+                    ->where('pagos.estatus_pago', '=', 'completado')->where('pagos.moneda', '=', 'USD');
             })
             ->select(
                 'comercios.id_comercio',
@@ -113,6 +113,8 @@ class AdminMetricsController extends Controller
                     'comercios_total' => $comerciosTotal,
                     'suscripciones_activas' => $suscripcionesActivas,
                     'pagos_pendientes' => $pagosPendientes,
+                    'moneda_metricas' => 'USD',
+                    'moneda_metricas' => 'USD',
                     'ingresos_totales' => $ingresosTotales,
                     'ingresos_mes_actual' => $ingresosMesActual,
                     'reclamos_total' => $reclamosTotal,

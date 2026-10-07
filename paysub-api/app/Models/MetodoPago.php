@@ -12,6 +12,10 @@ class MetodoPago extends Model
     protected $table = 'metodos_pago';
     protected $primaryKey = 'id_metodo_pago';
 
+    protected $hidden = ['token_pasarela'];
+
+    protected $casts = ['es_predeterminado' => 'boolean'];
+
     protected $fillable = [
         'id_usuario',
         'tipo_metodo',

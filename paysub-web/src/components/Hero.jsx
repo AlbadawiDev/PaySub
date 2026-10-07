@@ -43,8 +43,8 @@ const Hero = () => {
       <div className="hero-text">
         <h1>Suscripciones y<br/>Pagos Inteligentes</h1>
         <p className="subtitle">
-          La plataforma que conecta a clientes y comercios a través<br/>
-          de transacciones rápidas y seguras.
+          Gestiona planes, suscripciones y soporte con seguimiento.<br/>
+          Demostración de portafolio: sin cargos reales ni datos personales.
         </p>
         <div className="buttons">
           <Link to="/registro" className="btn-secondary">Crear cuenta gratis</Link>
@@ -67,17 +67,17 @@ const Hero = () => {
           {[...Array(8)].map((_, i) => <div key={i} className="particle"></div>)}
 
           <div className="credit-card">
-            <div className="card-brand">VISA</div>
+            <div className="card-brand">PaySub</div>
             <div className="card-chip"></div>
-            <div className="card-number">4532 7890 1234 5678</div>
+            <div className="card-number">DEMO · SIN CARGOS</div>
             <div className="card-details">
               <div>
-                <div className="card-holder-label">Titular</div>
-                <div className="card-holder-name">Paysub Pro</div>
+                <div className="card-holder-label">Proyecto</div>
+                <div className="card-holder-name">PaySub Studio</div>
               </div>
               <div>
-                <div className="card-expiry-label">Expira</div>
-                <div className="card-expiry-date">12/28</div>
+                <div className="card-expiry-label">Estado</div>
+                <div className="card-expiry-date">Demo local</div>
               </div>
             </div>
           </div>

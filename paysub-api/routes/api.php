@@ -18,18 +18,18 @@ use App\Http\Controllers\AdminMetricsController;
 |--------------------------------------------------------------------------
 */
 
-// --- RUTAS PÚBLICAS ---
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/register-cliente', [AuthController::class, 'registerCliente']);
-Route::post('/register/verify-otp', [AuthController::class, 'verifyRegistrationOtp']);
-Route::post('/register/resend-otp', [AuthController::class, 'resendRegistrationOtp']);
+// --- RUTAS PÃšBLICAS ---
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth-login');
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:registration');
+Route::post('/register-cliente', [AuthController::class, 'registerCliente'])->middleware('throttle:registration');
+Route::post('/register/verify-otp', [AuthController::class, 'verifyRegistrationOtp'])->middleware('throttle:registration');
+Route::post('/register/resend-otp', [AuthController::class, 'resendRegistrationOtp'])->middleware('throttle:registration');
 
 // --- RUTAS PROTEGIDAS (Sanctum) ---
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureActiveUser::class])->group(function () {
     
-    // Perfil y Autenticación
+    // Perfil y AutenticaciÃ³n
     Route::get('/user', [AuthController::class, 'userProfile']);
     Route::put('/user/profile', [AuthController::class, 'updateProfile']);
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -40,12 +40,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/comercio/perfil', [ComercioController::class, 'updateProfile']); // Ruta para el perfil del comercio
     Route::get('/comercio/reportes-pago', [ComercioController::class, 'reportesDePago']); // <--- NUEVA RUTA
 
-    // Catálogo de Planes
+    // CatÃ¡logo de Planes
     Route::get('/planes', [PlanController::class, 'index']);
     Route::get('/planes/{id}', [PlanController::class, 'show']);
     Route::get('/mis-planes', [PlanController::class, 'misPlanes']);
 
-    // Gestión de Planes (Comercios)
+    // GestiÃ³n de Planes (Comercios)
     Route::post('/planes', [PlanController::class, 'store']);
     Route::put('/planes/{id}', [PlanController::class, 'update']);
     Route::delete('/planes/{id}', [PlanController::class, 'destroy']);
@@ -56,18 +56,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/mis-suscripciones', [SuscripcionController::class, 'misSuscripciones']);
 	Route::put('/suscripciones/{id}/estado', [SuscripcionController::class, 'cambiarEstado']);
 
-    // Métodos de Pago (Clientes)
+    // MÃ©todos de Pago (Clientes)
     Route::get('/metodos-pago', [MetodoPagoController::class, 'index']);
     Route::post('/metodos-pago', [MetodoPagoController::class, 'store']);
     Route::delete('/metodos-pago/{id}', [MetodoPagoController::class, 'destroy']);
 
-    // Configuración de Cobro (Comercios)
+    // ConfiguraciÃ³n de Cobro (Comercios)
     Route::post('/comercio/datos-pago', [DatoPagoComercioController::class, 'store']);
     Route::get('/comercio/datos-pago', [DatoPagoComercioController::class, 'showMyData']);
 
     // Historial de Pagos General
     Route::get('/pagos', [PagoController::class, 'index']); 
     Route::get('/pagos/{id}', [PagoController::class, 'show']);
+    Route::get('/pagos/{id}/comprobante', [PagoController::class, 'comprobante']);
+    Route::put('/pagos/{id}/estado', [PagoController::class, 'updateStatus']);
 
     // Reclamos y solicitudes
     Route::post('/reclamos', [ReclamoController::class, 'store']);

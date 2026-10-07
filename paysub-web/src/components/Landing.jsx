@@ -15,7 +15,7 @@ const Landing = () => {
       <section className="landing-blanca" id="nosotros">
         <div className="contenedor-blanco">
           <h2>El problema que frena el <br />crecimiento de tu negocio</h2>
-          <p style={{ margin: '0 auto', textAlign: 'center', whiteSpace: 'nowrap' }}>
+          <p style={{ margin: '0 auto', textAlign: 'center', maxWidth: 600 }}>
             Pierdes tiempo, dinero y clientes por una gestión manual de pagos.
           </p>
 
@@ -54,15 +54,15 @@ const Landing = () => {
         <div className="valor-container">
           <h2>Todo lo que puedes <br />hacer con PaySub</h2>
           <p className="valor-subtitle">
-            Funcionalidades diseñadas para automatizar cobros, pagos y suscripciones.
+            Planes, reportes de pago privados y soporte con seguimiento para clientes y comercios.
           </p>
 
           <div className="valor-grid">
             <div className="valor-card">
               <h3>Para Comercios</h3>
               <ul>
-                <li>Ingresos recurrentes y predecibles</li>
-                <li>Automatización total de cobros</li>
+                <li>Publicación de planes recurrentes</li>
+                <li>Revisión de comprobantes privados</li>
                 <li>Control centralizado de suscripciones</li>
                 <li>Menos tareas manuales y errores</li>
               </ul>
@@ -71,8 +71,8 @@ const Landing = () => {
             <div className="valor-card">
               <h3>Para Clientes</h3>
               <ul>
-                <li>Pagos simples y seguros</li>
-                <li>Recordatorios automáticos</li>
+                <li>Reporte de pagos y estado de revisión</li>
+                <li>Reclamos con seguimiento</li>
                 <li>Gestión clara de suscripciones</li>
                 <li>Experiencia rápida y sin fricción</li>
               </ul>
@@ -94,13 +94,6 @@ const Landing = () => {
             <a href="#nosotros">Problemática</a>
             <a href="#servicios">Qué ofrecemos</a>
           </nav>
-
-          <div className="footer-socials">
-            <a href="#" aria-label="Facebook"><i className="fab fa-facebook-f"></i></a>
-            <a href="#" aria-label="Instagram"><i className="fab fa-instagram"></i></a>
-            <a href="#" aria-label="Twitter"><i className="fab fa-twitter"></i></a>
-            <a href="#" aria-label="LinkedIn"><i className="fab fa-linkedin-in"></i></a>
-          </div>
 
           <div className="footer-divider"></div>
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiFetch, API_BASE_URL, getAuthHeaders } from '../config/api';
 import WorkspaceLayout, {
@@ -48,7 +48,7 @@ const AdminDashboard = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const loadAdminData = async ({ preserveSelection = true } = {}) => {
+  const loadAdminData = useCallback(async ({ preserveSelection = true } = {}) => {
     setLoading(true);
     setError('');
 
@@ -84,17 +84,14 @@ const AdminDashboard = () => {
       setMetrics(unwrapData(metricsRes.payload));
       setClaims(claimsPayload);
 
-      if (!preserveSelection || !selectedClaimId) {
-        setSelectedClaimId(claimsPayload[0]?.id_reclamo || null);
-      } else if (!claimsPayload.some((item) => item.id_reclamo === selectedClaimId)) {
-        setSelectedClaimId(claimsPayload[0]?.id_reclamo || null);
-      }
+      setSelectedClaimId((current) => preserveSelection && claimsPayload.some((item) => item.id_reclamo === current)
+        ? current : claimsPayload[0]?.id_reclamo || null);
     } catch (loadError) {
       setError(loadError.message || 'Error cargando panel administrador.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate, token]);
 
   useEffect(() => {
     if (!token) {
@@ -103,7 +100,7 @@ const AdminDashboard = () => {
     }
 
     loadAdminData({ preserveSelection: false });
-  }, [navigate, token]);
+  }, [loadAdminData, navigate, token]);
 
   useEffect(() => {
     if (!selectedClaimId || !token) {
@@ -283,13 +280,13 @@ const AdminDashboard = () => {
               hint="Servicios vigentes"
             />
             <WorkspaceMetricCard
-              label="Ingresos totales"
+              label="Ingresos totales (USD)"
               value={formatCurrency(metrics.overview.ingresos_totales, 'USD')}
               hint="Pagos completados"
               tone="success"
             />
             <WorkspaceMetricCard
-              label="Ingresos del mes"
+              label="Ingresos del mes (USD)"
               value={formatCurrency(metrics.overview.ingresos_mes_actual, 'USD')}
               hint="Mes en curso"
               tone="success"
@@ -670,7 +667,7 @@ const AdminDashboard = () => {
               <div className="workspace-card__header">
                 <div>
                   <h3>Top comercios</h3>
-                  <p>Ordenados por ingresos completados acumulados.</p>
+                  <p>Ordenados por ingresos confirmados en USD. Sin conversión entre monedas.</p>
                 </div>
               </div>
               {(metrics.top_comercios || []).length === 0 ? (

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import MobilePaymentForm from './MobilePaymentForm';
 import { apiFetch, API_BASE_URL, getAuthHeaders } from '../config/api';
 import WorkspaceLayout, {
   WorkspaceBanner,
@@ -380,8 +381,8 @@ const ClienteDashboard = () => {
             <article className="workspace-card">
               <div className="workspace-card__header">
                 <div>
-                  <h3>Ingresos procesados</h3>
-                  <p>Total acumulado en tus pagos confirmados.</p>
+                  <h3>Pagos confirmados en USD</h3>
+                  <p>Total de pagos confirmados en USD. Las demás monedas se consultan en el historial.</p>
                 </div>
               </div>
 
@@ -750,6 +751,11 @@ const ClienteDashboard = () => {
             </div>
           </div>
 
+          <MobilePaymentForm token={token} plans={planes} onCreated={(subscription, message) => {
+            setSuscripciones((current) => [subscription, ...current]);
+            setSuccess(message);
+            setActiveSection('subscriptions');
+          }} />
           {planes.length === 0 ? (
             <WorkspaceState
               title="No hay planes disponibles"

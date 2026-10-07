@@ -105,6 +105,7 @@ export function getClaimContextLabel(claim) {
   return 'Caso general';
 }
 
-export function sumPayments(items = []) {
-  return items.reduce((accumulator, item) => accumulator + Number(item?.monto || 0), 0);
+export function sumPayments(items = [], currency = 'USD') {
+  return items.filter((item) => item.estatus_pago === 'completado' && item.moneda === currency)
+    .reduce((accumulator, item) => accumulator + Number(item?.monto || 0), 0);
 }
