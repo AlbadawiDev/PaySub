@@ -1,1 +1,14 @@
-.env.testing
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules/
+**/vendor/
+**/dist/
+**/build/
+**/*.sqlite
+**/*.sqlite-*
+**/.phpunit.result.cache
+paysub-api/storage/*
+!paysub-api/storage/.gitignore
+paysub-api/bootstrap/cache/*
+!paysub-api/bootstrap/cache/.gitignore

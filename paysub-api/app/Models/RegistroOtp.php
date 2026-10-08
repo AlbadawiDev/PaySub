@@ -53,6 +53,6 @@ class RegistroOtp extends Model
             return true;
         }
 
-        return $this->ultimo_envio_at->addSeconds($cooldownSeconds)->isPast();
+        return $this->ultimo_envio_at->copy()->addSeconds($cooldownSeconds)->isPast();
     }
 }

@@ -12,6 +12,8 @@ class Plan extends Model
     protected $table = 'planes';
     protected $primaryKey = 'id_plan';
 
+    protected $casts = ['estado' => 'boolean', 'precio' => 'decimal:2'];
+
     protected $fillable = [
         'id_comercio',
         'nombre_plan',

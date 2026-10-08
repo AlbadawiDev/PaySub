@@ -12,6 +12,8 @@ class Pago extends Model
     protected $table = 'pagos';
     protected $primaryKey = 'id_pago';
 
+    protected $hidden = ['comprobante_path'];
+
     protected $fillable = [
         'id_suscripcion',
         'id_metodo_pago',

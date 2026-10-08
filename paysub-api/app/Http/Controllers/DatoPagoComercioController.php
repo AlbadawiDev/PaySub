@@ -24,6 +24,10 @@ class DatoPagoComercioController extends Controller
 
         $comercio = Comercio::where('id_usuario', $usuario->id_usuario)->first();
 
+        if (!$comercio) {
+            return response()->json(['error' => 'No existe un comercio asociado.'], 404);
+        }
+
         $validator = Validator::make($request->all(), [
             'banco'         => 'required|string|max:100',
             'telefono_pago' => 'required|string|max:20',
@@ -57,7 +61,13 @@ class DatoPagoComercioController extends Controller
      */
     public function showMyData()
     {
+        if (Auth::user()->tipo_usuario !== 'comercio') {
+            return response()->json(['error' => 'Solo los comercios pueden consultar datos de cobro.'], 403);
+        }
         $comercio = Comercio::where('id_usuario', Auth::id())->first();
+        if (!$comercio) {
+            return response()->json(['error' => 'No existe un comercio asociado.'], 404);
+        }
         $datos = DatoPagoComercio::where('id_comercio', $comercio->id_comercio)->first();
         
         return response()->json($datos);

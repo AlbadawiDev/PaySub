@@ -26,10 +26,10 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'nombre_comercio' => 'required|string|max:255',
-            'email' => 'required|email',
-            'password' => 'required|string|min:6',
-            'rif' => 'required|string|max:30',
+            'nombre_comercio' => 'required|string|max:150',
+            'email' => 'required|email|max:150',
+            'password' => 'required|string|min:8|max:255',
+            'rif' => 'required|string|max:20',
             'telefono' => 'nullable|string|max:20',
             'web' => 'nullable|url|max:255',
         ]);
@@ -51,8 +51,8 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'nombre' => 'required|string|max:255',
             'apellido' => 'required|string|max:255',
-            'email' => 'required|email',
-            'password' => 'required|string|min:6',
+            'email' => 'required|email|max:150',
+            'password' => 'required|string|min:8|max:255',
             'cedula' => 'required|string|max:30',
             'telefono' => 'nullable|string|max:20',
         ]);
@@ -69,7 +69,7 @@ class AuthController extends Controller
     public function verifyRegistrationOtp(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'email' => 'required|email|max:150',
             'otp' => 'required|digits:6',
         ]);
 
@@ -78,7 +78,8 @@ class AuthController extends Controller
         }
 
         $email = $this->normalizeEmail($request->email);
-        $registroOtp = RegistroOtp::where('correo_electronico', $email)->first();
+        return DB::transaction(function () use ($request, $email) {
+        $registroOtp = RegistroOtp::where('correo_electronico', $email)->lockForUpdate()->first();
 
         if (!$registroOtp) {
             return response()->json([
@@ -188,9 +189,9 @@ class AuthController extends Controller
                 'code' => 'REGISTRATION_CONFLICT',
             ], 409);
         } catch (\Throwable $exception) {
+            report($exception);
             return response()->json([
                 'mensaje' => 'No fue posible completar el registro.',
-                'error' => $exception->getMessage(),
             ], 500);
         }
 
@@ -203,12 +204,13 @@ class AuthController extends Controller
                 'redirect_to' => '/login',
             ],
         ], 201);
+        }, 3);
     }
 
     public function resendRegistrationOtp(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
+            'email' => 'required|email|max:150',
         ]);
 
         if ($validator->fails()) {
@@ -216,7 +218,8 @@ class AuthController extends Controller
         }
 
         $email = $this->normalizeEmail($request->email);
-        $registroOtp = RegistroOtp::where('correo_electronico', $email)->first();
+        return DB::transaction(function () use ($request, $email) {
+        $registroOtp = RegistroOtp::where('correo_electronico', $email)->lockForUpdate()->first();
 
         if (!$registroOtp) {
             return response()->json([
@@ -235,17 +238,18 @@ class AuthController extends Controller
         try {
             return $this->refreshOtp($registroOtp, true);
         } catch (\Throwable $exception) {
+            report($exception);
             return response()->json([
                 'mensaje' => 'No fue posible reenviar el codigo OTP.',
-                'error' => $exception->getMessage(),
             ], 500);
         }
+        }, 3);
     }
 
     public function login(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|email|max:150',
             'password' => 'required|string',
         ]);
 
@@ -283,6 +287,10 @@ class AuthController extends Controller
             ], 403);
         }
 
+        if (!$usuario->estado) {
+            return response()->json(['mensaje' => 'La cuenta está deshabilitada.', 'code' => 'ACCOUNT_DISABLED'], 403);
+        }
+
         $token = $usuario->createToken('auth_token')->plainTextToken;
 
         $comercio = null;
@@ -309,71 +317,29 @@ class AuthController extends Controller
         /** @var \App\Models\Usuario $usuario */
         $usuario = Auth::user();
 
-        if ($usuario->tipo_usuario === 'comercio' && $request->has('nombre_comercio')) {
-            return response()->json([
-                'errors' => [
-                    'nombre_comercio' => ['El nombre del comercio no puede ser editado por seguridad.'],
-                ],
-            ], 422);
-        }
-
         if ($usuario->tipo_usuario === 'comercio') {
-            $rules = [
-                'telefono' => 'nullable|string|max:20',
-                'sitio_web' => 'nullable|string|max:255',
-                'descripcion' => 'nullable|string|max:500',
-                'logo_url' => 'nullable|string',
-                'facebook' => 'nullable|string',
-                'instagram' => 'nullable|string',
-                'twitter' => 'nullable|string',
-            ];
+            app(\App\Services\CommerceProfileService::class)->update($request, $usuario);
         } else {
-            $rules = [
-                'telefono' => 'nullable|string|max:20',
-            ];
+            $validated = $request->validate(['telefono' => 'sometimes|nullable|string|max:20']);
+            $usuario->update($validated);
         }
 
-        $validator = Validator::make($request->all(), $rules);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        try {
-            return DB::transaction(function () use ($request, $usuario) {
-                if ($usuario->tipo_usuario === 'comercio') {
-                    $comercio = Comercio::where('id_usuario', $usuario->id_usuario)->first();
-                    if ($comercio) {
-                        $comercio->update($request->only([
-                            'sitio_web',
-                            'descripcion',
-                            'logo_url',
-                            'facebook',
-                            'instagram',
-                            'twitter',
-                        ]));
-
-                        $usuario->update([
-                            'telefono' => $request->telefono ?? $usuario->telefono,
-                        ]);
-                    }
-                } else {
-                    $usuario->update($request->only(['telefono']));
-                }
-
-                return response()->json([
-                    'mensaje' => 'Perfil actualizado exitosamente',
-                    'user' => $usuario->load($usuario->tipo_usuario === 'comercio' ? 'comercio' : 'suscripciones'),
-                ], 200);
-            });
-        } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
+        return response()->json([
+            'mensaje' => 'Perfil actualizado exitosamente',
+            'user' => $usuario->fresh()->load($usuario->tipo_usuario === 'comercio' ? 'comercio' : 'suscripciones'),
+        ], 200);
     }
 
     public function logout(Request $request)
     {
-        $request->user()->tokens()->delete();
+        $token = $request->user()->currentAccessToken();
+        if ($token instanceof \Laravel\Sanctum\PersonalAccessToken) {
+            $token->delete();
+        } elseif ($request->hasSession()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         return response()->json(['mensaje' => 'Sesión cerrada exitosamente'], 200);
     }
@@ -399,12 +365,13 @@ class AuthController extends Controller
 
     private function startOtpRegistration(array $payload)
     {
+        return DB::transaction(function () use ($payload) {
         $conflictResponse = $this->validateRegistrationConflicts($payload);
         if ($conflictResponse !== null) {
             return $conflictResponse;
         }
 
-        $registroOtp = RegistroOtp::where('correo_electronico', $payload['correo_electronico'])->first();
+        $registroOtp = RegistroOtp::where('correo_electronico', $payload['correo_electronico'])->lockForUpdate()->first();
 
         if ($registroOtp && ($registroOtp->verified_at || $registroOtp->consumed_at)) {
             return response()->json([
@@ -413,7 +380,7 @@ class AuthController extends Controller
             ], 409);
         }
 
-        $countAsResend = $registroOtp !== null && $registroOtp->ultimo_envio_at !== null;
+        $countAsResend = $registroOtp !== null && $registroOtp->ultimo_envio_at !== null && !$registroOtp->isExpired();
 
         if (!$registroOtp) {
             $registroOtp = new RegistroOtp();
@@ -429,11 +396,12 @@ class AuthController extends Controller
         try {
             return $this->refreshOtp($registroOtp, $countAsResend);
         } catch (\Throwable $exception) {
+            report($exception);
             return response()->json([
                 'mensaje' => 'No fue posible enviar el codigo OTP.',
-                'error' => $exception->getMessage(),
             ], 500);
         }
+        }, 3);
     }
 
     private function refreshOtp(RegistroOtp $registroOtp, bool $countAsResend)
@@ -461,7 +429,7 @@ class AuthController extends Controller
         $registroOtp->verified_at = null;
         $registroOtp->consumed_at = null;
 
-        if (!$registroOtp->exists) {
+        if (!$registroOtp->exists || !$countAsResend) {
             $registroOtp->reenvios = 0;
         } elseif ($countAsResend) {
             $registroOtp->reenvios++;
@@ -532,6 +500,7 @@ class AuthController extends Controller
             ->where('correo_electronico', '!=', $email)
             ->whereNull('verified_at')
             ->whereNull('consumed_at')
+            ->where('expires_at', '>', now())
             ->exists();
 
         if ($duplicatePending) {

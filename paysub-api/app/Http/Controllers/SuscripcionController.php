@@ -51,11 +51,18 @@ class SuscripcionController extends Controller
             if (!$metodoPago) {
                 return response()->json(['error' => 'El método de pago no pertenece al usuario autenticado.'], 403);
             }
+
+            if (!config('payments.demo_mode') || app()->isProduction()) {
+                return response()->json([
+                    'mensaje' => 'La pasarela de tarjetas aún no está configurada. Usa el reporte de pago móvil.',
+                    'code' => 'PAYMENT_PROVIDER_NOT_CONFIGURED',
+                ], 503);
+            }
         }
 
         $suscripcionExistente = Suscripcion::where('id_usuario', $user->id_usuario)
             ->where('id_plan', $request->id_plan)
-            ->where('estado', self::ESTADO_ACTIVA)
+            ->whereIn('estado', [self::ESTADO_ACTIVA, 'pendiente'])
             ->where('fecha_fin', '>', Carbon::now())
             ->first();
 
@@ -74,7 +81,8 @@ class SuscripcionController extends Controller
                 'id_plan' => $plan->id_plan,
                 'fecha_inicio' => $fechaInicio,
                 'fecha_fin' => $fechaFin,
-                'estado' => self::ESTADO_ACTIVA,
+                'estado' => $plan->modalidad_cobro === 'prepago' && $request->metodo_usado === 'pago_movil'
+                    ? 'pendiente' : self::ESTADO_ACTIVA,
             ]);
 
             if ($plan->modalidad_cobro === 'prepago') {
@@ -82,7 +90,7 @@ class SuscripcionController extends Controller
                     'id_suscripcion' => $suscripcion->id_suscripcion,
                     'monto' => $plan->precio,
                     'moneda' => $plan->moneda,
-                    'estatus_pago' => 'completado',
+                    'estatus_pago' => $request->metodo_usado === 'tarjeta' ? 'simulado' : 'en_revision',
                     'tipo_flujo' => $request->metodo_usado === 'tarjeta' ? 'automatico' : 'manual',
                 ];
 
@@ -91,7 +99,7 @@ class SuscripcionController extends Controller
                     $pagoData['referencia_operacion'] = 'SIM-STRIPE-' . strtoupper(uniqid());
                 } else {
                     if ($request->hasFile('comprobante')) {
-                        $path = $request->file('comprobante')->store('comprobantes', 'public');
+                        $path = $request->file('comprobante')->store('comprobantes', 'local');
                         $pagoData['comprobante_path'] = $path;
                     }
 
@@ -105,7 +113,9 @@ class SuscripcionController extends Controller
             }
 
             return response()->json([
-                'mensaje' => 'Suscripción procesada exitosamente',
+                'mensaje' => $request->metodo_usado === 'pago_movil' && $plan->modalidad_cobro === 'prepago'
+                    ? 'Pago recibido para revisión. La suscripción se activará después de su aprobación.'
+                    : 'Suscripción de demostración procesada. No se realizó ningún cargo real.',
                 'data' => $suscripcion->load('plan'),
             ], 201);
         });
@@ -136,7 +146,7 @@ class SuscripcionController extends Controller
         $estado = request()->query('estado');
         if ($estado) {
             $normalized = $this->normalizeStatus($estado);
-            if (!in_array($normalized, [self::ESTADO_ACTIVA, self::ESTADO_CANCELADA], true)) {
+            if (!in_array($normalized, [self::ESTADO_ACTIVA, self::ESTADO_CANCELADA, 'pendiente'], true)) {
                 return response()->json(['error' => 'Filtro de estado inválido.'], 422);
             }
 
@@ -229,6 +239,10 @@ class SuscripcionController extends Controller
             }
         } elseif ($usuario->tipo_usuario !== 'administrador') {
             return response()->json(['error' => 'No autorizado para esta operación.'], 403);
+        }
+
+        if ($estadoNormalizado === self::ESTADO_ACTIVA && $suscripcion->estado === 'pendiente') {
+            return response()->json(['error' => 'Debes aprobar el pago pendiente antes de activar la suscripción.'], 422);
         }
 
         if ($suscripcion->estado === $estadoNormalizado) {

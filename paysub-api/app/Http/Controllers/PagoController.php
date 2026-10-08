@@ -4,10 +4,55 @@ namespace App\Http\Controllers;
 
 use App\Models\Comercio;
 use App\Models\Pago;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class PagoController extends Controller
 {
+    public function comprobante($id)
+    {
+        $authorization = $this->show($id);
+        if ($authorization->getStatusCode() !== 200) {
+            return $authorization;
+        }
+
+        $payment = Pago::findOrFail($id);
+        if (!$payment->comprobante_path || !Storage::disk('local')->exists($payment->comprobante_path)) {
+            return response()->json(['error' => 'Comprobante no encontrado.'], 404);
+        }
+
+        return Storage::disk('local')->download($payment->comprobante_path);
+    }
+
+    public function updateStatus(Request $request, $id)
+    {
+        if (!in_array(Auth::user()->tipo_usuario, ['comercio', 'administrador'], true)) {
+            return response()->json(['error' => 'Solo el comercio receptor o un administrador puede revisar pagos.'], 403);
+        }
+        $authorization = $this->show($id);
+        if ($authorization->getStatusCode() !== 200) {
+            return $authorization;
+        }
+        $validated = $request->validate(['estatus_pago' => 'required|in:completado,fallido']);
+
+        return DB::transaction(function () use ($id, $validated) {
+            $payment = Pago::whereKey($id)->lockForUpdate()->firstOrFail();
+            if ($payment->tipo_flujo !== 'manual' || $payment->estatus_pago !== 'en_revision') {
+                return response()->json(['error' => 'Este pago no está pendiente de revisión manual.'], 409);
+            }
+            $subscription = $payment->suscripcion()->lockForUpdate()->firstOrFail();
+            if ($subscription->estado !== 'pendiente') {
+                return response()->json(['error' => 'La suscripción ya no está pendiente.'], 409);
+            }
+            $payment->update($validated);
+            $subscription->update(['estado' => $validated['estatus_pago'] === 'completado' ? 'activa' : 'cancelada']);
+
+            return response()->json(['mensaje' => 'Pago revisado exitosamente.', 'data' => $payment->fresh('suscripcion')]);
+        });
+    }
+
     public function index()
     {
         $usuario = Auth::user();

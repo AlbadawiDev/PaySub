@@ -34,7 +34,7 @@ class PlanController extends Controller
             'descripcion' => 'nullable|string|max:1000',
             'precio' => 'required|numeric|min:0',
             'frecuencia' => 'required|in:semanal,mensual,trimestral,anual',
-            'moneda' => 'required|string|size:3',
+            'moneda' => 'required|string|in:USD,VES,EUR,usd,ves,eur',
             'modalidad_cobro' => 'required|in:prepago,postpago',
         ]);
 
@@ -66,7 +66,7 @@ class PlanController extends Controller
 
     public function show($id)
     {
-        $plan = Plan::with('comercio')->find($id);
+        $plan = Plan::with('comercio.datosPago')->find($id);
 
         if (!$plan) {
             return response()->json(['error' => 'Plan no encontrado'], 404);
@@ -122,7 +122,7 @@ class PlanController extends Controller
             'descripcion' => 'nullable|string|max:1000',
             'precio' => 'sometimes|required|numeric|min:0',
             'frecuencia' => 'sometimes|required|in:semanal,mensual,trimestral,anual',
-            'moneda' => 'sometimes|required|string|size:3',
+            'moneda' => 'sometimes|required|string|in:USD,VES,EUR,usd,ves,eur',
             'modalidad_cobro' => 'sometimes|required|in:prepago,postpago',
             'estado' => 'sometimes|required|boolean',
         ]);
@@ -184,11 +184,11 @@ class PlanController extends Controller
             ], 200);
         }
 
-        $plan->delete();
+        $plan->update(['estado' => false]);
 
         return response()->json([
-            'mensaje' => 'Plan eliminado exitosamente',
-            'data' => null,
+            'mensaje' => 'Plan desactivado. Se conserva el historial de suscripciones y pagos.',
+            'data' => $plan,
         ], 200);
     }
 }

@@ -66,7 +66,8 @@ public function store(Request $request)
             ], 201);
         });
     } catch (\Exception $e) {
-        return response()->json(['error' => 'Error al registrar tarjeta: ' . $e->getMessage()], 500);
+            report($e);
+        return response()->json(['error' => 'No fue posible registrar el método de pago.'], 500);
     }
 }
 

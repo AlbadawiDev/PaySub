@@ -21,9 +21,10 @@ class ComercioController extends Controller
                 'data' => $comercios
             ], 200);
         } catch (\Exception $e) {
+            report($e);
             return response()->json([
                 'error' => 'Error al recuperar comercios',
-                'detalle' => $e->getMessage()
+                'detalle' => 'Consulta el registro privado del servidor.'
             ], 500);
         }
     }
@@ -45,27 +46,8 @@ class ComercioController extends Controller
      */
     public function updateProfile(Request $request)
     {
-        try {
-            // Usamos Auth::user() para mayor claridad
-            $comercio = Comercio::where('id_usuario', Auth::user()->id_usuario)->first();
-
-            if (!$comercio) {
-                return response()->json(['error' => 'No se encontró un comercio vinculado'], 404);
-            }
-
-            $request->validate([
-                'nombre_comercio' => 'string|max:150',
-                'logo'            => 'nullable|string',
-                'descripcion'     => 'nullable|string',
-                'sitio_web'       => 'nullable|url',
-                'redes_sociales'  => 'nullable|array'
-            ]);
-
-            $comercio->update($request->all());
-            return response()->json(['mensaje' => 'Perfil actualizado', 'data' => $comercio], 200);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al actualizar', 'detalle' => $e->getMessage()], 500);
-        }
+        $commerce = app(\App\Services\CommerceProfileService::class)->update($request, Auth::user());
+        return response()->json(['mensaje' => 'Perfil actualizado', 'data' => $commerce], 200);
     }
 
     /**

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import '../App.css';
+import PlanCreator from './PlanCreator';
+import './shared/WorkspaceLayout.css';
 import { apiFetch, API_BASE_URL, getAuthHeaders } from '../config/api';
 
 const cardStyle = {
@@ -25,6 +27,7 @@ const ComercioDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [reviewing, setReviewing] = useState(null);
 
   useEffect(() => {
     if (!token) {
@@ -54,6 +57,9 @@ const ComercioDashboard = () => {
           throw new Error(userRes.message || 'No se pudo recuperar tu sesión.');
         }
 
+        if (!planesRes.ok || !susRes.ok || !pagosRes.ok) {
+          throw new Error(planesRes.message || susRes.message || pagosRes.message || 'No se pudo cargar la información del comercio.');
+        }
         setUser(getPayload(userRes.payload));
         setPlanes(Array.isArray(getPayload(planesRes.payload)) ? getPayload(planesRes.payload) : []);
         setSuscripciones(Array.isArray(getPayload(susRes.payload)) ? getPayload(susRes.payload) : []);
@@ -68,7 +74,7 @@ const ComercioDashboard = () => {
     loadData();
   }, [navigate, token]);
 
-  const ingresos = useMemo(() => pagos.reduce((sum, pago) => sum + Number(pago.monto || 0), 0), [pagos]);
+  const ingresos = useMemo(() => pagos.filter((pago) => pago.estatus_pago === 'completado' && pago.moneda === 'USD' && pago.moneda === 'USD').reduce((sum, pago) => sum + Number(pago.monto || 0), 0), [pagos]);
 
   const handleLogout = async () => {
     try {
@@ -109,6 +115,33 @@ const ComercioDashboard = () => {
     } catch (changeError) {
       setError(changeError.message);
     }
+  };
+
+  const revisarPago = async (paymentId, status) => {
+    setReviewing(paymentId);
+    setError('');
+    try {
+      const response = await apiFetch(`/pagos/${paymentId}/estado`, {
+        token, method: 'PUT', body: { estatus_pago: status },
+      });
+      if (!response.ok) throw new Error(response.message || 'No se pudo revisar el pago.');
+      setPagos((current) => current.map((payment) => payment.id_pago === paymentId ? { ...payment, estatus_pago: status } : payment));
+      setSuscripciones((current) => current.map((subscription) => subscription.id_suscripcion === response.data.id_suscripcion
+        ? { ...subscription, estado: response.data.suscripcion.estado } : subscription));
+      setSuccess('Pago revisado y suscripción actualizada.');
+    } catch (failure) { setError(failure.message); }
+    finally { setReviewing(null); }
+  };
+
+  const descargarComprobante = async (paymentId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/pagos/${paymentId}/comprobante`, { headers: getAuthHeaders(token) });
+      if (!response.ok) throw new Error('No se pudo descargar el comprobante privado.');
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = url; link.download = `comprobante-${paymentId}`; link.click();
+      URL.revokeObjectURL(url);
+    } catch (failure) { setError(failure.message); }
   };
 
   if (loading) {
@@ -159,7 +192,7 @@ const ComercioDashboard = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 12, marginTop: 14 }}>
                 <div style={cardStyle}><small>Planes registrados</small><h3>{planes.length}</h3></div>
                 <div style={cardStyle}><small>Suscripciones activas</small><h3>{suscripciones.filter((s) => s.estado === 'activa').length}</h3></div>
-                <div style={cardStyle}><small>Ingresos acumulados</small><h3>{ingresos.toFixed(2)} USD</h3></div>
+                <div style={cardStyle}><small>Ingresos confirmados (USD)</small><h3>{ingresos.toFixed(2)} USD</h3></div>
               </div>
             </section>
           )}
@@ -167,6 +200,10 @@ const ComercioDashboard = () => {
           {activeSection === 'planes' && (
             <section className="section-panel active">
               <h2 className="panel-title">Mis planes</h2>
+              <PlanCreator token={token} onCreated={(plan) => {
+                setPlanes((current) => [plan, ...current]);
+                setSuccess('Plan publicado y disponible para clientes.');
+              }} />
               {planes.length === 0 ? (
                 <div style={cardStyle}>Aún no has creado planes.</div>
               ) : (
@@ -245,7 +282,14 @@ const ComercioDashboard = () => {
                           <td style={{ padding: 8 }}>{pago.suscripcion?.plan?.nombre_plan || 'Plan'}</td>
                           <td style={{ padding: 8 }}>{pago.suscripcion?.usuario?.nombre || 'Cliente'}</td>
                           <td style={{ padding: 8 }}>{pago.monto} {pago.moneda}</td>
-                          <td style={{ padding: 8 }}>{pago.estatus_pago}</td>
+                          <td style={{ padding: 8 }}>
+                            {pago.estatus_pago}
+                            {pago.tipo_flujo === 'manual' && <button type="button" className="btn-volver" onClick={() => descargarComprobante(pago.id_pago)}>Ver comprobante privado</button>}
+                            {pago.estatus_pago === 'en_revision' && <div>
+                              <button type="button" disabled={reviewing === pago.id_pago} className="btn-volver" onClick={() => revisarPago(pago.id_pago, 'completado')}>Aprobar</button>
+                              <button type="button" disabled={reviewing === pago.id_pago} className="btn-volver" onClick={() => revisarPago(pago.id_pago, 'fallido')}>Rechazar</button>
+                            </div>}
+                          </td>
                           <td style={{ padding: 8 }}>{new Date(pago.created_at).toLocaleDateString()}</td>
                         </tr>
                       ))}
